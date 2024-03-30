@@ -1,0 +1,21 @@
+{
+  "name": "jup_staker",
+  "version": "1.0.0",
+  "dependencies": {
+    "@coral-xyz/anchor": "^0.29.0",
+    "@solana/spl-token": "^0.4.1",
+    "@youpaichris/logger": "^5.0.0",
+    "child_process": "^1.0.2",
+    "dotenv": "^16.4.5"
+  },
+  "main": "index.js",
+  "bin": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "pkg": {
+    "assets": [
+      "src/**.*"
+    ]
+  }
+}
