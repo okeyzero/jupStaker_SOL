@@ -207,6 +207,12 @@ class Worker {
         provider: { connection },
       } = this;
 
+      // // uncomment for stake all JUP balance
+      // // and replace Amount to AmountUse for increaseLockedAmount (232 line)
+      // const jupBalance = await this.checkTokenBalance(this.wallet.publicKey);
+      // let AmountUse = 
+      //  new anchor.BN(parseFloat(jupBalance) * 1e6) || new anchor.BN(0);
+
       let [c, u] = await this.getOrCreateEscrow(),
         [d, p] = await this.getOrCreateATAInstruction(
           jupAddress,
