@@ -137,6 +137,7 @@ class Worker {
     }
 
     let successCount = 0;
+    let counts = 0;
 
     while (successCount < 1) {
       let success;
@@ -151,6 +152,13 @@ class Worker {
             TYPE === 1 ? "质押" : "投票"
           }失败 重试...`
         );
+        counts++;
+        logger.error(`Try ${counts} finished`);
+        if (counts > 15) { // 15 = amount of tries for each wallet
+          logger.error(`counts >15`);
+          successCount++;
+          return false;
+        }
       } else {
         successCount++;
         return true;
