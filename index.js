@@ -28,7 +28,8 @@ if (process.pkg) {
 }
 
 async function handleMintTask() {
-  const workerNum = Math.min(keysPrivateKeys.length, os.cpus().length);
+  // const workerNum = Math.min(keysPrivateKeys.length, os.cpus().length);
+  const workerNum = 1; // use for 1 stream
   let activeWorkerCount = workerNum;
   for (let i = 0; i < workerNum; i++) {
     logger.info(`Start ${i} child process...`);
@@ -71,11 +72,20 @@ async function handleMintTask() {
           let taskNum = keysPrivateKeys.length;
           let privateKey = keysPrivateKeys.shift();
 
-          child.send({
-            rpc,
-            privateKey,
-            taskNum,
-          });
+          if (privateKey) {
+            const randomTimeout = Math.floor(Math.random() * 20000) + 10000; // random 10-30s
+            setTimeout(() => {
+              logger.info(`NEW WALLET`);
+              child.send({
+                rpc,
+                privateKey,
+                taskNum,
+              });
+              logger.info(`Delay: ${randomTimeout/1000} seconds`);
+            }, randomTimeout);
+          } else {
+            child.kill();
+          }
           // 假设这里有逻辑来检查是否还有剩余任务，然后发送任务信息给子进程
           break;
         case "result":
