@@ -68,3 +68,74 @@ const voteId = 2; // 根据实际情况修改 voteId
 3. 在 `CastVote` 交易详情中找到 `Side` 字段，其值即为所需的 `voteId`。
 
 ![查找投票 ID](image-2.png)
+
+
+# jup_staker
+
+jup_staker is a batch script designed for Jupiter staking and voting on the Solana blockchain. With a simplified command-line interface, users can easily perform batch staking and voting operations.
+Website: https://vote.jup.ag/
+
+## Screenshots
+
+Staking Operation
+![Staking Operation screenshot](image-1.png)
+Voting Operation
+![Voting Operation screenshot](image.png)
+
+## Installation
+
+In the root directory of the project, execute the following command to install project dependencies:
+
+```bash
+npm i
+```
+
+First, you need to input relevant information in the keys.txt file. Make sure to add your information in the following format (e.g., address, private key), one per line:
+
+```bash
+address----privateKey
+privateKey
+```
+
+## Running
+
+Then, run the following command to start the program:
+
+```bash
+node index.js
+```
+
+## Instructions
+
+Single account runs in a single process simultaneously.
+
+### Modifying Voting Target
+
+If you need to modify the voting target, follow these steps:
+
+1. Open the `src/worker.js` file.
+2. Navigate to lines 43 to 48 in the file.
+3. Modify the `proposalId` and `voteId` values in the following code snippet according to your needs:
+
+```javascript
+// Example voting link: https://vote.jup.ag/proposal/5N9UbMGzga3SL8Rq7qDZCGfZX3FRDUhgqkSY2ksQjg8r
+// Modify `proposalId` to the ID of the proposal you want to vote for
+const proposalId = new PublicKey(
+  "5N9UbMGzga3SL8Rq7qDZCGfZX3FRDUhgqkSY2ksQjg8r"
+);
+const voteId = 2; // Modify voteId according to your actual situation
+```
+
+For example, if you want to vote for the proposal with the link https://vote.jup.ag/proposal/5N9UbMGzga3SL8Rq7qDZCGfZX3FRDUhgqkSY2ksQjg8r, then change the value of `proposalId` to `5N9UbMGzga3SL8Rq7qDZCGfZX3FRDUhgqkSY2ksQjg8r`.
+
+For instance, if the voting link is https://vote.jup.ag/proposal/5N9UbMGzga3SL8Rq7qDZCGfZX3FRDUhgqkSY2ksQjg8r, then change the content of `proposalId` to `5N9UbMGzga3SL8Rq7qDZCGfZX3FRDUhgqkSY2ksQjg8r`.
+
+### Finding the Vote ID
+
+To find the `voteId` for a specific vote:
+
+1. Cast a vote manually.
+2. Open your transaction records in the blockchain explorer.
+3. In the transaction details for the `CastVote` transaction, locate the `Side` field, which contains the desired `voteId`.
+
+![Finding Vote ID](image-2.png)
