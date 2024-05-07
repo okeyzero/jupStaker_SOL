@@ -28,8 +28,8 @@ if (process.pkg) {
 }
 
 async function handleMintTask() {
-  // const workerNum = Math.min(keysPrivateKeys.length, os.cpus().length);
-  const workerNum = 1; // use for 1 stream
+  const workerNum = Math.min(keysPrivateKeys.length, os.cpus().length);
+  //const workerNum = 1; // use for 1 stream
   let activeWorkerCount = workerNum;
   for (let i = 0; i < workerNum; i++) {
     logger.info(`Start ${i} child process...`);
@@ -73,7 +73,12 @@ async function handleMintTask() {
           let privateKey = keysPrivateKeys.shift();
 
           if (privateKey) {
-            const randomTimeout = Math.floor(Math.random() * 20000) + 10000; // random 10-30s todo
+            // 这里是 10-30s 的随机延迟 (Here is a random delay of 10-30s)， 如果不需要 可以 设置为 0 (If you don't need it, you can set it to 0)
+            const randomTimeout = 0;
+            //const randomTimeout = Math.floor(Math.random() * 20000) + 10000; // random 10-30s todo
+            logger.info(
+              `The ${i} child process delay: ${randomTimeout / 1000} seconds`
+            );
             setTimeout(() => {
               logger.info(`NEW WALLET`);
               child.send({
@@ -81,8 +86,8 @@ async function handleMintTask() {
                 privateKey,
                 taskNum,
               });
-              logger.info(`Delay: ${randomTimeout/1000} seconds`);
             }, randomTimeout);
+            //延迟randomTimeout
           } else {
             child.kill();
           }
@@ -119,7 +124,9 @@ async function getPrivateKeyAndAddress(key) {
       address = wallet.address;
     } catch (error) {
       if (args.length > 0 && args[0] !== "") {
-        logger.error(`该数据 (The data): ${args}导入私钥失败 错误原因 (The reason for the error that failed to import the private key): ${error.message}`);
+        logger.error(
+          `该数据 (The data): ${args}导入私钥失败 错误原因 (The reason for the error that failed to import the private key): ${error.message}`
+        );
       }
       return { privateKey: null, address: null };
     }
@@ -154,7 +161,7 @@ async function filterValidPrivateKeys(buyers) {
 }
 
 async function main() {
-  logger.warn(`当前版本为 (The current version is): 1.0.0`);
+  logger.warn(`当前版本为 (The current version is): 1.0.1`);
   //读取  keys 文件 (Read the keys file)
   const keys = fs
     .readFileSync(keysPath, "utf8")

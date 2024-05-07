@@ -118,21 +118,31 @@ class Worker {
 
   async work() {
     const balance = await this.checkBalance(this.wallet.publicKey);
+    let stakeAmount = Amount;
 
     if (balance && balance < 0.003 * LAMPORTS_PER_SOL) {
       logger.error(`${this.wallet.publicKey.toBase58()} Insufficient balance`);
     }
     if (TYPE === 1) {
-      if (Amount.isZero()) {
-        logger.error(`第${this.index} 子进程 质押金额 为0 错误 (The deposit amount of the child process is 0 error)`);
-        return false;
-      }
       //获取jupAddress 的余额 (Get the balance of jupAddress)
       const jupBalance = await this.checkTokenBalance(this.wallet.publicKey);
       if (jupBalance === 0) {
         logger.error(
           `${this.wallet.publicKey.toBase58()} Insufficient jup balance`
         );
+        return false;
+      }
+
+      //如果 Amount 为 0 则质押所有余额 (If Amount is zero, stake all balance)
+      if (Amount.isZero()) {
+        stakeAmount =
+          new anchor.BN(parseFloat(jupBalance) * 1e6) || new anchor.BN(0);
+      }
+      if (stakeAmount.isZero()) {
+        logger.error(
+          `第${this.index} 子进程 质押金额 为0 错误 (The deposit amount of the child process is 0 error)`
+        );
+        return false;
       }
     }
 
@@ -142,19 +152,22 @@ class Worker {
     while (successCount < 1) {
       let success;
       if (TYPE === 1) {
-        success = await this.stake();
+        success = await this.stake(stakeAmount);
       } else {
         success = await this.vote();
       }
       if (!success) {
         logger.error(
-          `第${this.index} 子进程 地址 (Child process address):${this.wallet.publicKey.toBase58()} ${
+          `第${
+            this.index
+          } 子进程 地址 (Child process address):${this.wallet.publicKey.toBase58()} ${
             TYPE === 1 ? "质押 (stake)" : "投票 (vote)"
           }失败 重试... (Failed to retry...)`
         );
         counts++;
         logger.error(`Try ${counts} finished`);
-        if (counts > 15) { // 15 = amount of tries for each wallet
+        if (counts > 15) {
+          // 15 = amount of tries for each wallet
           logger.error(`counts >15`);
           successCount++;
           return false;
@@ -208,18 +221,12 @@ class Worker {
     }
   }
 
-  async stake() {
+  async stake(stakeAmount) {
     try {
       let {
         wallet,
         provider: { connection },
       } = this;
-
-      // // uncomment for stake all JUP balance
-      // // and replace Amount to AmountUse for increaseLockedAmount (232 line)
-      // const jupBalance = await this.checkTokenBalance(this.wallet.publicKey);
-      // let AmountUse = 
-      //  new anchor.BN(parseFloat(jupBalance) * 1e6) || new anchor.BN(0);
 
       let [c, u] = await this.getOrCreateEscrow(),
         [d, p] = await this.getOrCreateATAInstruction(
@@ -237,7 +244,7 @@ class Worker {
           wallet.publicKey
         ),
         g = [u, p, h].filter(Boolean),
-        v = this.program.methods.increaseLockedAmount(Amount).accounts({
+        v = this.program.methods.increaseLockedAmount(stakeAmount).accounts({
           escrow: c,
           escrowTokens: d,
           locker: locker,
@@ -248,7 +255,7 @@ class Worker {
 
       let instruction = await v.instruction();
 
-      let signature = await this.toggleMaxDuration(!0, [...g, instruction]);
+      let signature = await this.toggleMaxDuration(!0, [...g], [instruction]);
 
       if (signature) {
         logger.success(
@@ -259,12 +266,20 @@ class Worker {
         return true;
       } else {
         logger.error(
-          `第${this.index} 子进程 (Child process) ${this.wallet.publicKey.toBase58()} 质押失败 (stake failed)`
+          `第${
+            this.index
+          } 子进程 (Child process) ${this.wallet.publicKey.toBase58()} 质押失败 (stake failed)`
         );
         return false;
       }
     } catch (error) {
       logger.error(`交易 (transaction) Error: ${error.message}`);
+      // 如果(if) program error: 0x1 在报错中 则返回真(Returns true if an error is reported.) 因为这样该账号无论如何都会失败 (Because this account will fail no matter what.)
+      // 错误情况 1: custom program error: 0x1 jup余额不足 特别是因为 sol 交易发送过但是超时未确认 重试的时候遇到该情况 (Error 1, insufficient jup balance, especially because the sol transaction has been sent but has not been confirmed due to timeout when retrying)
+      // 错误情况 2: 这个错误的原因是 账户 sol 不足，请务必保证资金够用 建议 0.01 sol (The reason for this error is insufficient sol in the account. Please make sure that the funds are sufficient. It is recommended to use 0.01 sol.)
+      if (error.message.includes("program error: 0x1")) {
+        return true;
+      }
       return false;
     }
   }
@@ -272,6 +287,17 @@ class Worker {
   async vote() {
     try {
       let [a, r] = await this.getOrCreateVote(proposalId);
+
+      //查询a是否存在 如果存在 说明已经投票过了 (Check if a exists, if it exists, it means that you have already voted)
+      let accountAtaInfo = await this.connection.getAccountInfo(a);
+      if (accountAtaInfo) {
+        logger.warn(
+          `第${
+            this.index
+          } 子进程 ${this.wallet.publicKey.toBase58()} 投票失败,已经投过票 (Failed to vote, already voted)`
+        );
+        return true;
+      }
 
       let signature = await this.voteProposal(
         proposalId,
@@ -290,12 +316,18 @@ class Worker {
         return true;
       } else {
         logger.error(
-          `第${this.index} 子进程 (Child process) ${this.wallet.publicKey.toBase58()} 投票失败 (Failed to vote)`
+          `第${
+            this.index
+          } 子进程 (Child process) ${this.wallet.publicKey.toBase58()} 投票失败 (Failed to vote)`
         );
         return false;
       }
     } catch (error) {
       logger.error(`投票交易 (Voting transaction) Error: ${error.message}`);
+      //already initialized 如果是这个报错 说明已经投过票
+      if (error.message.includes("already initialized")) {
+        return true;
+      }
       return false;
     }
   }
@@ -345,7 +377,7 @@ class Worker {
     }
   }
 
-  async toggleMaxDuration(e, t) {
+  async toggleMaxDuration(e, t, r) {
     let [a] = await this.getOrCreateEscrow();
     t.unshift(
       ComputeBudgetProgram.setComputeUnitPrice({
@@ -362,6 +394,7 @@ class Worker {
         escrowOwner: this.wallet.publicKey,
       })
       .preInstructions(t || [])
+      .postInstructions(r || [])
       .rpc();
   }
 
@@ -392,12 +425,16 @@ class Worker {
       try {
         const balance = await this.connection.getBalance(publicKey);
         logger.info(
-          `${publicKey.toBase58()} 当前余额 (Current balance) ${balance / LAMPORTS_PER_SOL} SOL`
+          `${publicKey.toBase58()} 当前余额 (Current balance) ${
+            balance / LAMPORTS_PER_SOL
+          } SOL`
         );
         return balance;
       } catch (error) {
         logger.error(
-          `${publicKey.toBase58()} 获取余额失败,正在重试... (Failed to obtain the balance and is trying again...) ${index + 1}`
+          `${publicKey.toBase58()} 获取余额失败,正在重试... (Failed to obtain the balance and is trying again...) ${
+            index + 1
+          }`
         );
       }
     }
@@ -415,15 +452,27 @@ class Worker {
           tokenAccount
         );
         logger.info(
-          `${publicKey.toBase58()} 当前jup余额 (Current jup balance) ${balance?.value?.uiAmount} JUP`
+          `${publicKey.toBase58()} 当前jup余额 (Current jup balance) ${
+            balance?.value?.uiAmount
+          } JUP`
         );
         return balance?.value?.uiAmount;
       } catch (error) {
+        // 如果是这个报错 说明没有jup账户 (If this error is reported, it means that there is no jup account) could not find account
+        if (error.message.includes("could not find account")) {
+          logger.error(
+            `${publicKey.toBase58()} 未找到jup账户 (Jup account not found)`
+          );
+          return 0;
+        }
         logger.error(
-          `${publicKey.toBase58()} 获取jup余额失败,正在重试...(Failed to obtain the jup balance and is trying again...) ${index + 1}`
+          `${publicKey.toBase58()} 获取jup余额失败,正在重试...(Failed to obtain the jup balance and is trying again...) ${
+            index + 1
+          }`
         );
       }
     }
+    return 0;
   }
 }
 
