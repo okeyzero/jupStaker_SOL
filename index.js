@@ -9,7 +9,7 @@ const dotenv = require("dotenv");
 dotenv.config();
 
 const RPC_LIST = process.env.RPC_LIST.split(",") || [
-  "https://solana-mainnet.g.alchemy.com/v2/K_HI4WpHLjhNYJBbxrrrKmNo3TEKGBCt",
+  "https://solana-mainnet.g.alchemy.com/v2/K_HI4WpHLjhNYJBbxrrrKmNo3TEKGBCt", // todo
 ];
 
 let keysPath = "keys.txt";
@@ -20,7 +20,7 @@ let keysPrivateKeys = [];
 let sucessAddress = [];
 let failAddress = [];
 if (process.pkg) {
-  // 如果通过 pkg 打包，则使用这种方式获取路径
+  // 如果通过 pkg 打包，则使用这种方式获取路径 (If packaged through pkg, use this method to get the path)
   const exePath = path.dirname(process.execPath);
   keysPath = path.join(exePath, keysPath);
   sucessAddressPath = path.join(exePath, sucessAddressPath);
@@ -28,7 +28,8 @@ if (process.pkg) {
 }
 
 async function handleMintTask() {
-  const workerNum = Math.min(keysPrivateKeys.length, os.cpus().length);
+  // const workerNum = Math.min(keysPrivateKeys.length, os.cpus().length);
+  const workerNum = 1; // use for 1 stream
   let activeWorkerCount = workerNum;
   for (let i = 0; i < workerNum; i++) {
     logger.info(`Start ${i} child process...`);
@@ -44,7 +45,7 @@ async function handleMintTask() {
       activeWorkerCount--;
 
       if (activeWorkerCount === 0) {
-        //运行完 将 sellerPrivateKeys 和 getWallet(sellerPrivateKeys)导出到 sellerNew.txt
+        //运行完 将 (After running will) sellerPrivateKeys 和 (and) getWallet(sellerPrivateKeys)导出到 (Export to) sellerNew.txt
         fs.writeFileSync(
           sucessAddressPath,
           sucessAddress
@@ -57,7 +58,7 @@ async function handleMintTask() {
             .map((item) => `${item.address}----${item.privateKey}`)
             .join("\n")
         );
-        logger.info(`任务执行完毕`);
+        logger.info(`任务执行完毕 (The task is completed)`);
         // process.exit(0);
       }
     });
@@ -65,21 +66,30 @@ async function handleMintTask() {
     child.on("message", (message) => {
       switch (message.type) {
         case "requestItem":
-          // 处理子进程请求新任务的逻辑
-          // console.log("子进程请求新任务");
+          // 处理子进程请求新任务的逻辑 (Logic for processing child process requests for new tasks)
+          // console.log("子进程请求新任务 (The child process requests a new task)");
           let rpc = randomRpc();
           let taskNum = keysPrivateKeys.length;
           let privateKey = keysPrivateKeys.shift();
 
-          child.send({
-            rpc,
-            privateKey,
-            taskNum,
-          });
-          // 假设这里有逻辑来检查是否还有剩余任务，然后发送任务信息给子进程
+          if (privateKey) {
+            const randomTimeout = Math.floor(Math.random() * 20000) + 10000; // random 10-30s todo
+            setTimeout(() => {
+              logger.info(`NEW WALLET`);
+              child.send({
+                rpc,
+                privateKey,
+                taskNum,
+              });
+              logger.info(`Delay: ${randomTimeout/1000} seconds`);
+            }, randomTimeout);
+          } else {
+            child.kill();
+          }
+          // 假设这里有逻辑来检查是否还有剩余任务，然后发送任务信息给子进程 (Suppose there is logic here to check if there are any remaining tasks, and then send task information to the child process)
           break;
         case "result":
-          // 处理子进程发送的操作结果
+          // 处理子进程发送的操作结果 (Process the result of the operation sent by the child process)
           let status = message.status;
           if (status === true) {
             sucessAddress.push(message.address);
@@ -89,10 +99,10 @@ async function handleMintTask() {
             }
           }
 
-          // 这里可以根据操作结果执行相应的逻辑，如更新数据库等
+          // 这里可以根据操作结果执行相应的逻辑，如更新数据库等 (Here you can perform corresponding logic based on the operation results, such as updating the database, etc.)
           break;
         default:
-          console.log("未知消息类型");
+          console.log("未知消息类型 (Unknown message type)");
       }
     });
   }
@@ -109,7 +119,7 @@ async function getPrivateKeyAndAddress(key) {
       address = wallet.address;
     } catch (error) {
       if (args.length > 0 && args[0] !== "") {
-        logger.error(`该数据: ${args}导入私钥失败 错误原因: ${error.message}`);
+        logger.error(`该数据 (The data): ${args}导入私钥失败 错误原因 (The reason for the error that failed to import the private key): ${error.message}`);
       }
       return { privateKey: null, address: null };
     }
@@ -144,8 +154,8 @@ async function filterValidPrivateKeys(buyers) {
 }
 
 async function main() {
-  logger.warn(`当前版本为: 1.0.0`);
-  //读取  keys 文件
+  logger.warn(`当前版本为 (The current version is): 1.0.0`);
+  //读取  keys 文件 (Read the keys file)
   const keys = fs
     .readFileSync(keysPath, "utf8")
     .split(/\r?\n/)
@@ -153,10 +163,10 @@ async function main() {
 
   keysPrivateKeys = await filterValidPrivateKeys(keys);
 
-  //打乱 keysPrivateKeys 的顺序
+  //打乱 (Disrupt) keysPrivateKeys 的顺序 (The order of)
   keysPrivateKeys.sort(() => Math.random() - 0.5);
 
-  logger.info(`钱包数量: ${keysPrivateKeys.length}`);
+  logger.info(`钱包数量 (Number of wallets): ${keysPrivateKeys.length}`);
 
   await handleMintTask();
 }

@@ -33,22 +33,22 @@ const {
   getAssociatedTokenAddress,
 } = require("@solana/spl-token");
 
-// //导入 idl.json
+// //导入 idl.json (import)
 const idl = require("./idl.json");
 const governIDL = require("./IDLGOV.json");
 const locked_voter = new PublicKey(
   "voTpe3tHQ7AjQHMapgSue2HJFAh2cGsdokqN3XqmVSj"
 );
 
-//投票链接  https://vote.jup.ag/proposal/5N9UbMGzga3SL8Rq7qDZCGfZX3FRDUhgqkSY2ksQjg8r
-//再改下 投票id 就行了
+//投票链接 (Voting link) https://vote.jup.ag/proposal/5N9UbMGzga3SL8Rq7qDZCGfZX3FRDUhgqkSY2ksQjg8r
+//再改下 投票id 就行了 (Just change the voting id again)
 const proposalId = new PublicKey(
   "5N9UbMGzga3SL8Rq7qDZCGfZX3FRDUhgqkSY2ksQjg8r"
 );
 const voteId = 2;
 const jupAddress = new PublicKey("JUPyiwrYJFskUPiHa7hkeR8VUtAeFoSYbKedZNsDvCN");
 const locker = new PublicKey("CVMdMd79no569tjc5Sq7kzz8isbfCcFyBS5TLGsrZ5dN");
-//此处locker 是 由  bJ1TRoFo2P6UHVwqdiipp6Qhp2HaaHpLowZ5LHet8Gm (未知)和 voTpe3tHQ7AjQHMapgSue2HJFAh2cGsdokqN3XqmVSj (质押地址)计算得出的
+//此处 (here) locker 是 由 (Is caused by) bJ1TRoFo2P6UHVwqdiipp6Qhp2HaaHpLowZ5LHet8Gm (未知)和 ((Unknown) and) voTpe3tHQ7AjQHMapgSue2HJFAh2cGsdokqN3XqmVSj (质押地址)计算得出的 ((Stake address) calculated)
 // function deriveLocker() {
 //   const basePublic = new PublicKey(
 //     "bJ1TRoFo2P6UHVwqdiipp6Qhp2HaaHpLowZ5LHet8Gm"
@@ -61,7 +61,7 @@ const locker = new PublicKey("CVMdMd79no569tjc5Sq7kzz8isbfCcFyBS5TLGsrZ5dN");
 //     locked_voter
 //   );
 // }
-//未知作用
+//未知作用 (Unknown effect)
 // const SmartWallet = new PublicKey(
 //   "GYxjWMU9Bp2o3psFNFnhEZTYsHTE24WQuSU6iGrLZ9EZ"
 // );
@@ -124,10 +124,10 @@ class Worker {
     }
     if (TYPE === 1) {
       if (Amount.isZero()) {
-        logger.error(`第${this.index} 子进程 质押金额 为0 错误`);
+        logger.error(`第${this.index} 子进程 质押金额 为0 错误 (The deposit amount of the child process is 0 error)`);
         return false;
       }
-      //获取jupAddress 的余额
+      //获取jupAddress 的余额 (Get the balance of jupAddress)
       const jupBalance = await this.checkTokenBalance(this.wallet.publicKey);
       if (jupBalance === 0) {
         logger.error(
@@ -148,9 +148,9 @@ class Worker {
       }
       if (!success) {
         logger.error(
-          `第${this.index} 子进程 地址:${this.wallet.publicKey.toBase58()} ${
-            TYPE === 1 ? "质押" : "投票"
-          }失败 重试...`
+          `第${this.index} 子进程 地址 (Child process address):${this.wallet.publicKey.toBase58()} ${
+            TYPE === 1 ? "质押 (stake)" : "投票 (vote)"
+          }失败 重试... (Failed to retry...)`
         );
         counts++;
         logger.error(`Try ${counts} finished`);
@@ -254,17 +254,17 @@ class Worker {
         logger.success(
           `第${
             this.index
-          } 子进程 ${this.wallet.publicKey.toBase58()} 质押成功 ${signature}`
+          } 子进程 (Child process) ${this.wallet.publicKey.toBase58()} 质押成功 (Successful stake) ${signature}`
         );
         return true;
       } else {
         logger.error(
-          `第${this.index} 子进程 ${this.wallet.publicKey.toBase58()} 质押失败`
+          `第${this.index} 子进程 (Child process) ${this.wallet.publicKey.toBase58()} 质押失败 (stake failed)`
         );
         return false;
       }
     } catch (error) {
-      logger.error(`交易 Error: ${error.message}`);
+      logger.error(`交易 (transaction) Error: ${error.message}`);
       return false;
     }
   }
@@ -285,17 +285,17 @@ class Worker {
         logger.success(
           `第${
             this.index
-          } 子进程 ${this.wallet.publicKey.toBase58()} 投票成功 ${signature}`
+          } 子进程 (Child process) ${this.wallet.publicKey.toBase58()} 投票成功 (Successful vote) ${signature}`
         );
         return true;
       } else {
         logger.error(
-          `第${this.index} 子进程 ${this.wallet.publicKey.toBase58()} 投票失败`
+          `第${this.index} 子进程 (Child process) ${this.wallet.publicKey.toBase58()} 投票失败 (Failed to vote)`
         );
         return false;
       }
     } catch (error) {
-      logger.error(`投票交易 Error: ${error.message}`);
+      logger.error(`投票交易 (Voting transaction) Error: ${error.message}`);
       return false;
     }
   }
@@ -382,7 +382,7 @@ class Worker {
 
       return true;
     } catch (error) {
-      logger.error(`初始化 Error: ${error.message}`);
+      logger.error(`初始化 (initialize) Error: ${error.message}`);
       return false;
     }
   }
@@ -392,12 +392,12 @@ class Worker {
       try {
         const balance = await this.connection.getBalance(publicKey);
         logger.info(
-          `${publicKey.toBase58()} 当前余额 ${balance / LAMPORTS_PER_SOL} SOL`
+          `${publicKey.toBase58()} 当前余额 (Current balance) ${balance / LAMPORTS_PER_SOL} SOL`
         );
         return balance;
       } catch (error) {
         logger.error(
-          `${publicKey.toBase58()} 获取余额失败,正在重试...${index + 1}`
+          `${publicKey.toBase58()} 获取余额失败,正在重试... (Failed to obtain the balance and is trying again...) ${index + 1}`
         );
       }
     }
@@ -415,12 +415,12 @@ class Worker {
           tokenAccount
         );
         logger.info(
-          `${publicKey.toBase58()} 当前jup余额 ${balance?.value?.uiAmount} JUP`
+          `${publicKey.toBase58()} 当前jup余额 (Current jup balance) ${balance?.value?.uiAmount} JUP`
         );
         return balance?.value?.uiAmount;
       } catch (error) {
         logger.error(
-          `${publicKey.toBase58()} 获取jup余额失败,正在重试...${index + 1}`
+          `${publicKey.toBase58()} 获取jup余额失败,正在重试...(Failed to obtain the jup balance and is trying again...) ${index + 1}`
         );
       }
     }
